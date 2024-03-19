@@ -1,0 +1,55 @@
+image: maven:3.8.4-openjdk-17
+
+stages:
+  - build
+  - test
+  - deploy review
+  # - deploy stage
+  # - deploy production
+  # - test production
+
+variables:
+  LOCAL_URL: http://localhost
+  STAGING_URL: # To Be Filled Later
+  PROD_URL: # To Be Filled Later
+
+build Java:
+  stage: build
+  script:
+    - mvn clean package
+  artifacts:
+    paths:
+      - ./target
+
+unit test:
+  stage: test
+  script:
+    - mvn test
+
+test stage:
+  stage: test
+  # when: manual
+  # allow_failure: false
+  script:
+    - java -jar target/demo-0.0.1-SNAPSHOT.jar &
+    - echo "--Version"
+    - echo $CI_COMMIT_SHORT_SHA
+    - sleep 5
+    - curl $LOCAL_URL:8080 | tac | tac | grep -q "this is home"
+    - curl $LOCAL_URL:8080 | tac | tac | grep -q "$CI_COMMIT_SHORT_SHA"
+
+deploy review (Feature branch Deployment):
+  stage: deploy review
+  only:
+    - merge_requests
+  environment:
+      name: feature/$CI_COMMIT_REF_NAME
+      url: $LOCAL_URL/$CI_COMMIT_REF_NAME:8080
+  script:
+    - java -jar target/demo-0.0.1-SNAPSHOT.jar &
+    - echo "--Version"
+
+# deploy to stage (EKS):
+#   stage: deploy stage
+#   environment: 
+
